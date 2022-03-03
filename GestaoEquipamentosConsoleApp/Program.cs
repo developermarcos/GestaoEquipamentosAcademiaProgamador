@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text.RegularExpressions;
 // Validar nome com pelo menos 6 caracteres
 // Validar se existe chamado em aberto com o equipamento a ser excluído
 //
@@ -6,23 +7,33 @@ namespace GestaoEquipamentosConsoleApp
 {
     internal class Program
     {
-        static bool sairSistema;
+        static bool sairSistema = false;
 
         // base cadastro equipamentos
-        static string[] nomes = new string[100], seriais = new string[100], fabricacaoDatas = new string[100], fabricantes = new string[100];
-        static decimal[] precoAquisicoes = new decimal[100];
+        static string[] equipamentoNomes = new string[100], equipamentoSeriais = new string[100], equipamentoFabricacaoDatas = new string[100], equipamentoFabricantes = new string[100];
+        static decimal[] equipamentoPrecoAquisicoes = new decimal[100];
         
         // base controle de chamados
         static string[] titulos = new string[100], descricoes = new string[100], dataAberturas = new string[100];
         static int[] equipamentoPosicaoReferencias = new int[100];
         static DateTime[] dataAberturaChamados = new DateTime[100];
+
+        // base cadastro Solicitantes
+        static string[] solicitanteNomes = new string[100], solicitanteEmails = new string[100], solicitanteTelefones= new string[100];
+        
         static void Main(string[] args)
         {
+            char telaSelecionada;
+            char menuSelecionado;
             char opcaoMenu;
             do
             {
-                MenuOpcoes(out opcaoMenu);
-                ChamaMetodos(opcaoMenu);
+                MenuTelasPrincipais(out telaSelecionada);
+                if (sairSistema != true && telaSelecionada != '0')
+                {
+                    MenuCrud(out menuSelecionado, telaSelecionada);
+                    ChamaMetodos(telaSelecionada, menuSelecionado);
+                }
             } while (sairSistema != true);
         }
 
@@ -30,13 +41,15 @@ namespace GestaoEquipamentosConsoleApp
         public static void ListarEquipamentos()
         {
             LimparConsole();
-            MensagemTitulo("Listar equipamentos", true, true);
-            if (nomes[0] != "" && nomes[0] != null)
+            TituloTelas("Listar equipamentos", true, true);
+            if (equipamentoNomes[0] != "" && equipamentoNomes[0] != null)
+            {
                 ImprimeListaEquipamentos();
+                Mensagem("Pressione enter para voltar para o menu", false, true);
+            }
             else
-                MensagemAviso("Nenhum produto cadastrado", false, true);
+                MensagemAviso("- Nenhum produto cadastrado, pressione enter para voltar para o menu.", false, true);
             
-            Mensagem("Pressione enter para voltar para o menu", false, true);
             Console.ReadKey();
             LimparConsole();
         }
@@ -46,8 +59,8 @@ namespace GestaoEquipamentosConsoleApp
             string nome, serie, dataFabricacao, fabricante;
             decimal precoAquisicao;
 
-            MensagemTitulo("Cadastrar Equipamentos", true, true);
-            Mensagem("Informe o nome com mais no mínimo 6 caracteres ou enter para sair: ", false, false);
+            TituloTelas("Cadastrar Equipamentos", true, true);
+            Mensagem("Informe o nome com no mínimo 6 caracteres ou enter para sair: ", false, false);
             nome = Console.ReadLine();
             if(nome.Length > 0 && nome.Length < 6)
             {
@@ -104,11 +117,11 @@ namespace GestaoEquipamentosConsoleApp
             int posicaoInsert = SelectIdToInsert();
             if (posicaoInsert != -1)
             {
-                nomes[posicaoInsert] = nome;
-                seriais[posicaoInsert] = serie;
-                fabricacaoDatas[posicaoInsert] = dataFabricacao;
-                fabricantes[posicaoInsert] = fabricante;
-                precoAquisicoes[posicaoInsert] = precoAquisicao;
+                equipamentoNomes[posicaoInsert] = nome;
+                equipamentoSeriais[posicaoInsert] = serie;
+                equipamentoFabricacaoDatas[posicaoInsert] = dataFabricacao;
+                equipamentoFabricantes[posicaoInsert] = fabricante;
+                equipamentoPrecoAquisicoes[posicaoInsert] = precoAquisicao;
                 LimparConsole();
                 MensagemSucesso("Equipamento cadastrado com sucesso!", false, true);
             }
@@ -127,9 +140,9 @@ namespace GestaoEquipamentosConsoleApp
             bool encerrarMetodo = false;
             int id = default;
 
-            MensagemTitulo("Editar Equipamentos", true, true);
-            if (ExistePosicaoPreenchidaArrayEquipamentos() == false) { 
-                MensagemAviso("Nenhum equipamento cadastrado, pressione enter para voltar ao menu.", false, true);
+            TituloTelas("Editar Equipamentos", true, true);
+            if (ExisteChamadosComEsseProduto() == false) { 
+                MensagemAviso("- Nenhum equipamento cadastrado, pressione enter para voltar ao menu.", false, true);
                 Console.ReadKey();
                 LimparConsole();
             }
@@ -141,8 +154,13 @@ namespace GestaoEquipamentosConsoleApp
                 string lerTela;
                 while (existeIdEquipamento == false)
                 {
-                    Mensagem("Informe o id que deseja alterar ou enter para voltar: ", false, false);
-                    lerTela = Console.ReadLine();
+                    do
+                    {
+                        Mensagem("Informe o id que deseja alterar ou enter para voltar: ", false, false);
+                        lerTela = Console.ReadLine();
+                    }
+                    while (lerTela != "" && lerTela.Length != 1);
+
                     if (lerTela == "")
                     {
                         LimparConsole();
@@ -166,32 +184,32 @@ namespace GestaoEquipamentosConsoleApp
                     string nomeValidacao;
                     do
                     {
-                        Mensagem("\nInforme o nome com mais de 6 caracteres ou aperte enter para manter a informação anterior: ", false, false);
+                        Mensagem("Informe o nome com mais de 6 caracteres ou aperte enter para manter a informação anterior: ", false, false);
                         nome = Console.ReadLine();
                         nomeValidacao = nome;
                         if (nomeValidacao.Trim().Length > 0 && nomeValidacao.Trim().Length <= 5)
-                            MensagemAviso("\nNome informado contem menos de 6 caracteres", false, true);
+                            MensagemAviso("Nome informado contem menos de 6 caracteres\n", false, false);
                     } while (nomeValidacao.Trim().Length > 0 && nomeValidacao.Trim().Length <= 5);
 
-                    Console.Write("Informe o serie ou aperte enter para manter a informação anterior: ");
+                    Console.Write("Informe o serial ou aperte enter para manter a informação anterior: ");
                     serie = Console.ReadLine();
-                    Console.Write("Informe o sabricação ou aperte enter para manter a informação anterior: ");
-                    dataFabricacao = Console.ReadLine();
                     Console.Write("Informe o fabricante ou aperte enter para manter a informação anterior: ");
                     fabricante = Console.ReadLine();
+                    Console.Write("Informe o ano de fabricação ou aperte enter para manter a informação anterior: ");
+                    dataFabricacao = Console.ReadLine();
                     Console.Write("Informe o preço de aquisição ou aperte enter para manter a informação anterior: ");
                     preco = Console.ReadLine();
 
                     if (nome != null && nome != "")
-                        nomes[id] = nome;
+                        equipamentoNomes[id] = nome;
                     if (serie != null && serie != "")
-                        seriais[id] = serie;
+                        equipamentoSeriais[id] = serie;
                     if (dataFabricacao != null && dataFabricacao != "")
-                        fabricacaoDatas[id] = dataFabricacao;
+                        equipamentoFabricacaoDatas[id] = dataFabricacao;
                     if (fabricante != null && fabricante != "")
-                        fabricantes[id] = fabricante;
+                        equipamentoFabricantes[id] = fabricante;
                     if (preco != null && preco != "")
-                        precoAquisicoes[id] = Convert.ToDecimal(preco);
+                        equipamentoPrecoAquisicoes[id] = Convert.ToDecimal(preco);
 
                     MensagemSucesso("Equipamento editado com sucesso!", true, true);
                 }
@@ -200,11 +218,12 @@ namespace GestaoEquipamentosConsoleApp
 
         public static void ExcluirEquipamentos()
         {
-            MensagemTitulo("Excluir Equipamentos", true, true);
+            string lerTela;
+            TituloTelas("Excluir Equipamentos", true, true);
             
-            if(ExistePosicaoPreenchidaArrayEquipamentos() == false)
+            if(ExisteChamadosComEsseProduto() == false)
             {
-                Mensagem("Nenhum item cadastrado, pressione enter e volte ao menu.", false, true);
+                MensagemAviso("- Nenhum item cadastrado, pressione enter e volte ao menu.", false, true);
                 Console.ReadKey();
                 LimparConsole();
             }
@@ -213,8 +232,13 @@ namespace GestaoEquipamentosConsoleApp
                 Mensagem("Segue lista de equipamentos cadastrados.", false, true);
                 ImprimeListaEquipamentos();
 
-                Mensagem("Informe o id que deseja excluir ou enter para sair:", false, false);
-                string lerTela = Console.ReadLine();
+                do
+                {
+                    Mensagem("Informe o id que deseja excluir ou enter para sair: ", false, false);
+                    lerTela = Console.ReadLine();
+                }
+                while (lerTela != "" && lerTela.Length != 1);
+
                 if (lerTela == "")
                 {
                     LimparConsole();
@@ -225,21 +249,21 @@ namespace GestaoEquipamentosConsoleApp
                 {
                     if (ExisteChamadoParaEsseEquipamento(id) == false)
                     {
-                        nomes[id] = "";
-                        seriais[id] = "";
-                        fabricacaoDatas[id] = "";
-                        fabricantes[id] = "";
-                        precoAquisicoes[id] = default;
+                        equipamentoNomes[id] = "";
+                        equipamentoSeriais[id] = "";
+                        equipamentoFabricacaoDatas[id] = "";
+                        equipamentoFabricantes[id] = "";
+                        equipamentoPrecoAquisicoes[id] = default;
                         MensagemSucesso("Equipamento excluído com sucesso!", true, true);
                     }
                     else
                     {
-                        MensagemAviso("Equipamento não excluído, pois o mesmo encontra-se vínculado a um chamado.", true, true);
+                        MensagemAviso("- Equipamento não excluído, pois o mesmo encontra-se vínculado a um chamado.", true, true);
                     }
                 }
                 else
                 {
-                    MensagemErro("Item não encontrado.", true, true);
+                    MensagemErro("- Item não encontrado.", true, true);
                 }
             }
         }
@@ -250,11 +274,11 @@ namespace GestaoEquipamentosConsoleApp
         public static void ListarChamados()
         {
             LimparConsole();
-            MensagemTitulo("Listar Chamados", true, true);
+            TituloTelas("Listar Chamados", true, true);
             
             if (ExistePosicaoPreenchidaArrayChamados() == false)
             {
-                MensagemAviso("Não existe chamados cadastrados, pressione enter para voltar para o menu", false, true);
+                MensagemAviso("- Não existe chamados cadastrados, pressione enter para voltar para o menu", false, true);
                 Console.ReadKey();
                 LimparConsole();
                 return;
@@ -270,8 +294,8 @@ namespace GestaoEquipamentosConsoleApp
             string titulo, descricao, dataAbertura, equipamentoReferenciaLerTela;
             int equipamentoReferencia;
 
-            MensagemTitulo("Cadastrar Chamados", true, true);
-            if (ExistePosicaoPreenchidaArrayEquipamentos() == false)
+            TituloTelas("Cadastrar Chamados", true, true);
+            if (ExisteChamadosComEsseProduto() == false)
             {
                 MensagemAviso("Nenhum equipamento cadastrado, pressione enter para voltar ao menu", false, true);
                 Console.ReadKey();
@@ -293,17 +317,24 @@ namespace GestaoEquipamentosConsoleApp
                 LimparConsole();
                 return;
             }
-            MensagemAviso("Equipamentos cadastrados", false, true);
+            MensagemAviso("\nEquipamentos cadastrados\n", false, false);
             ImprimeListaEquipamentos();
-            Console.Write("Informe a referência do equipamento (EX: 1) ou enter para sair: ");
-            equipamentoReferenciaLerTela = Console.ReadLine();
+            bool apenasNumeros = true;
+            string padraoApenasNumeros = @"^\d+$";
+            do
+            {
+                Console.Write("Informe a referência do equipamento (EX: 1) ou enter para sair: ");
+                equipamentoReferenciaLerTela = Console.ReadLine();
+                apenasNumeros = Regex.IsMatch(equipamentoReferenciaLerTela, padraoApenasNumeros);
+            }
+            while (equipamentoReferenciaLerTela != "" && apenasNumeros == false);
             if (equipamentoReferenciaLerTela == "")
             {
                 LimparConsole();
                 return;
             }
             equipamentoReferencia = Convert.ToInt32(equipamentoReferenciaLerTela) - 1;
-            if (nomes[equipamentoReferencia] == null)
+            if (equipamentoNomes[equipamentoReferencia] == null)
             {
                 MensagemAviso("Equipamento não encontrado", false, true);
                 Console.ReadKey();
@@ -347,10 +378,11 @@ namespace GestaoEquipamentosConsoleApp
         {
             string titulo, descricao, referenciaProduto, dataAbertura;
             int idReferenciaProduto;
+            string lerTela;
 
             LimparConsole();
 
-            MensagemTitulo("Editar Chamados", true, true);
+            TituloTelas("Editar Chamados", true, true);
             if (ExistePosicaoPreenchidaArrayChamados() == false) 
             { 
                 MensagemAviso("Nenhum chamado cadastrado, pressione enter para voltar ao menu.", false, true);
@@ -361,15 +393,20 @@ namespace GestaoEquipamentosConsoleApp
             else
             {
                 ImprimeListaChamados();
-                Mensagem("Informe o id que deseja alterar ou enter para voltar:", false, false);
-                string lerTela = Console.ReadLine();
+                do
+                {
+                    Mensagem("Informe o id que deseja alterar ou enter para voltar: ", false, false);
+                    lerTela = Console.ReadLine();
+                }
+                while (lerTela != "" && lerTela.Length != 1);
+                
                 if (lerTela == "")
                 {
                     LimparConsole();
                     return;
                 }
 
-                MensagemTitulo("Editar Chamado", true, true);
+                TituloTelas("Editar Chamado", true, true);
                 ImprimeListaEquipamentos();
 
                 int id = Convert.ToInt32(lerTela) - 1;
@@ -406,7 +443,8 @@ namespace GestaoEquipamentosConsoleApp
         }
         public static void ExcluirChamados()
         {
-            MensagemTitulo("Excluir Equipamentos", true, true);
+            string lerTela;
+            TituloTelas("Excluir Equipamentos", true, true);
             if (ExistePosicaoPreenchidaArrayChamados() == false)
             {
                 MensagemAviso("Nenhum chamado cadastrado, pressione enter para voltar.", false, true);
@@ -418,8 +456,13 @@ namespace GestaoEquipamentosConsoleApp
             {
                 ImprimeListaChamados();
 
-                Mensagem("Informe o id que deseja excluir ou enter para sair:", false, false);
-                string lerTela = Console.ReadLine();
+                
+                do
+                {
+                    Mensagem("Informe o id que deseja excluir ou enter para sair: ", false, false);
+                    lerTela = Console.ReadLine();
+                }
+                while (lerTela != "" && lerTela.Length != 1);
                 if (lerTela == "")
                 {
                     LimparConsole();
@@ -433,7 +476,10 @@ namespace GestaoEquipamentosConsoleApp
                     equipamentoPosicaoReferencias[id] = default;
                     dataAberturas[id] = "";
                     dataAberturaChamados[id] = default;
-                    MensagemSucesso("Equipamento excluído com sucesso!", true, true);
+                    MensagemSucesso("Equipamento excluído com sucesso!", false, true);
+                    Mensagem("Pressione enter para voltar ao menu", false, false);
+                    Console.ReadKey();
+                    LimparConsole();
                 }
                 else
                 {
@@ -441,110 +487,236 @@ namespace GestaoEquipamentosConsoleApp
                 }
             }
         }
-       
+
+        #endregion
+
+        #region Metodos Solicitantes
+        private static void ListarSolicitantes()
+        {
+            TituloTelas("Listar Solicitantes", true, true);
+            if(ExistePosicaoPreenchidaArraySolicitantes() == false)
+            {
+                MensagemAviso("- Nenhum solicitante cadastrado", false, true);
+                Console.ReadKey();
+                LimparConsole();
+            }
+            else
+            {
+                ImprimirSolicitantes();
+                Mensagem("Pressione enter para voltar ao menu.", false, true);
+                Console.ReadKey();
+                LimparConsole();
+            }
+        }
+        private static void CadastrarSolicitantes()
+        {
+            string nome, email, telefone;
+            
+            TituloTelas("Cadastrar Solicitantes", true, true);
+
+            do
+            {
+                Mensagem("Informe o nome com no mínimo 6 caracteres ou enter para sair: ", false, false);
+                nome = Console.ReadLine();
+            } while (nome != "" && nome.Length < 6);
+            Console.Write("Informe o email ou enter para sair: ");
+            email = Console.ReadLine();
+            if (email == "")
+            {
+                LimparConsole();
+                return;
+            }
+            Console.Write("Informe o telefone EX(00 00000-0000) ou enter para sair: ");
+            telefone = Console.ReadLine();
+            if (telefone == "")
+            {
+                LimparConsole();
+                return;
+            }
+
+            int posicaoInsert = posicaoParaInsercaoSolicitante();
+            if (posicaoInsert != -1)
+            {
+                solicitanteNomes[posicaoInsert] = nome;
+                solicitanteEmails[posicaoInsert] = email;
+                solicitanteTelefones[posicaoInsert] = telefone;
+                LimparConsole();
+                MensagemSucesso("Solicitante cadastrado com sucesso!", false, true);
+            }
+            else
+            {
+                MensagemAviso("Base de dados está cheia, contate o administrador.", false, true);
+                Console.ReadKey();
+                LimparConsole();
+            }
+        }
+        private static void EditarSolicitantes()
+        {
+
+        }
+        private static void ExcluirSolicitantes()
+        {
+
+        }
         #endregion
 
         #region Metodos Menu
-        static void MenuOpcoes(out char opcaoSelecionada)
+        static void MenuTelasPrincipais(out char telaSelecionada)
         {
-            Console.WriteLine("Segue abaixo as opções disponíveis no sistema");
-            Console.WriteLine("1- Listas Equipamentos");
-            Console.WriteLine("2- Cadastrar Equipamentos");
-            Console.WriteLine("3- Editar Equipamentos");
-            Console.WriteLine("4- Excluir Equipamentos");
-            Console.WriteLine("5- Listas Chamados");
-            Console.WriteLine("6- Cadastrar Chamados");
-            Console.WriteLine("7- Editar Chamados");
-            Console.WriteLine("8- Excluir Chamados");
-            Console.WriteLine("0- Sair do sistema");
+            string lerTela = "";
+            TituloTelas("Menu seletor de telas", false, true);
+            while(lerTela != "1" && lerTela != "2" && lerTela != "3" && lerTela != "0") { 
+                Console.WriteLine("Segue abaixo as opções disponíveis de tela");
+                Console.WriteLine("1- Equipamentos");
+                Console.WriteLine("2- Chamados");
+                Console.WriteLine("3- Solicitantes");
+                Console.WriteLine("0- Sair sistema");
 
-            Console.Write("Informa a opção desejada: ");
-            opcaoSelecionada = Convert.ToChar(Console.ReadLine());
-        }
-        public static void ChamaMetodos(char opcaoMenu)
-        {
-            switch (opcaoMenu)
+                Console.Write("\nInforma a opção desejada: ");
+                lerTela = Console.ReadLine();
+                LimparConsole();
+            }
+            if (lerTela == "0")
             {
-                case '0':
-                    SairSistema();
-                    break;
+                Mensagem("Realmente deseja sair do sistema? \n (s) Sim ou (n) Não: ", false, false);
+                char desejaSairDoSistema = Convert.ToChar(Console.ReadLine());
+                if(desejaSairDoSistema == 's')
+                    sairSistema = true;
+                LimparConsole();
+            }
+
+            telaSelecionada = Convert.ToChar(lerTela);
+        }
+        static void MenuCrud(out char opcaoSelecionada, char telaSelecionada)
+        {
+            string lerTela = "", nomeTela = "";
+
+            switch (telaSelecionada)
+            {
                 case '1':
-                    ListarEquipamentos();
+                    TituloTelas("Equipamentos", false, true);
+                    nomeTela = "Equipamentos";
                     break;
                 case '2':
-                    CadastrarEquipamentos();
+                    TituloTelas("Chamados", false, true);
+                    nomeTela = "Chamados";
                     break;
                 case '3':
-                    EditarEquipamentos();
-                    break;
-                case '4':
-                    ExcluirEquipamentos();
-                    break;
-                case '5':
-                    ListarChamados();
-                    break;
-                case '6':
-                    CadastrarChamados();
-                    break;
-                case '7':
-                    EditarChamados();
-                    break;
-                case '8':
-                    ExcluirChamados();
-                    break;
-                default:
-                    OpcaoInvalida();
+                    TituloTelas("Solicitantes", false, true);
+                    nomeTela = "Solicitantes";
                     break;
             }
+
+            while (lerTela != "1" && lerTela != "2" && lerTela != "3" && lerTela != "4")
+            {
+                Console.WriteLine("Segue abaixo as opções disponíveis para {0}", nomeTela);
+                Console.WriteLine("1- Listar");
+                Console.WriteLine("2- Cadastrar");
+                Console.WriteLine("3- Editar");
+                Console.WriteLine("4- Excluir");
+
+                Console.Write("\nInforma a opção desejada: ");
+                lerTela = Console.ReadLine();
+                LimparConsole();
+            }
+
+            opcaoSelecionada = Convert.ToChar(lerTela);
         }
-        private static void OpcaoInvalida()
+        public static void ChamaMetodos(char telaSelecionada, char opcaoMenu)
         {
-            PrintarMensagemColorida("Parâmetro informado não corresponde as opções disponívels", "vermelho", true, true);
-        }
-        private static void SairSistema()
-        {
-            PrintarMensagemColorida("O sistema sera fechado", "amarelo", true, true);
-            Console.ReadKey();
-            sairSistema = true;
-        }
-        private static void LimparConsole()
-        {
-            Console.Clear();
+            if (telaSelecionada == '1')
+            {
+                switch (opcaoMenu)
+                {
+                    case '1':
+                        ListarEquipamentos();
+                        break;
+                    case '2':
+                        CadastrarEquipamentos();
+                        break;
+                    case '3':
+                        EditarEquipamentos();
+                        break;
+                    case '4':
+                        ExcluirEquipamentos();
+                        break;
+                }
+            }
+            else if (telaSelecionada == '2')
+            {
+                switch (opcaoMenu)
+                {
+                    case '1':
+                        ListarChamados();
+                        break;
+                    case '2':
+                        CadastrarChamados();
+                        break;
+                    case '3':
+                        EditarChamados();
+                        break;
+                    case '4':
+                        ExcluirChamados();
+                        break;
+                }
+            }
+            else if (telaSelecionada == '3')
+            {
+                switch (opcaoMenu)
+                {
+                    case '1':
+                        ListarSolicitantes();
+                        break;
+                    case '2':
+                        CadastrarSolicitantes();
+                        break;
+                    case '3':
+                        EditarSolicitantes();
+                        break;
+                    case '4':
+                        ExcluirSolicitantes();
+                        break;
+                }
+            }
         }
         #endregion
 
         #region Metodos auxiliares
+        private static void LimparConsole()
+        {
+            Console.Clear();
+        }
         #region Equipamentos
         private static void ImprimeListaEquipamentos()
         {
-            for (int i = 0; i < nomes.Length; i++)
+            for (int i = 0; i < equipamentoNomes.Length; i++)
             {
-                if(nomes[i] != "" && nomes[i] != null)
-                    Console.Write("ID: {5} | Produto: {0} | Numero de série: {1} | Data de fabricação: {2} | fabricante: {3} | preço: {4} \n", nomes[i], seriais[i], fabricacaoDatas[i], fabricantes[i], precoAquisicoes[i].ToString(), (i + 1).ToString());
+                if(equipamentoNomes[i] != "" && equipamentoNomes[i] != null)
+                    Console.Write("ID: {5} | Produto: {0} | Numero de série: {1} | Data de fabricação: {2} | fabricante: {3} | preço: {4} \n", equipamentoNomes[i], equipamentoSeriais[i], equipamentoFabricacaoDatas[i], equipamentoFabricantes[i], equipamentoPrecoAquisicoes[i].ToString(), (i + 1).ToString());
             }
             Console.WriteLine();
         }
         private static int SelectIdToInsert()
         {
-            for (int i = 0; i < nomes.Length; i++)
+            for (int i = 0; i < equipamentoNomes.Length; i++)
             {
-                if (nomes[i] == "" || nomes[i] == null)
+                if (equipamentoNomes[i] == "" || equipamentoNomes[i] == null)
                     return i;
             }
             return -1;
         }
         private static bool ExisteNoArrayEquipamentos(int id)
         {
-            if (nomes[id] != ""  && nomes[id] != null && nomes[id].Length > 5)
+            if (equipamentoNomes[id] != ""  && equipamentoNomes[id] != null && equipamentoNomes[id].Length > 5)
                 return true;
             else
                 return false;
         }
-        private static bool ExistePosicaoPreenchidaArrayEquipamentos()
+        private static bool ExisteChamadosComEsseProduto()
         {
-            for (int i = 0; i < nomes.Length; i++)
+            for (int i = 0; i < equipamentoNomes.Length; i++)
             {
-                if(nomes[i] != "" && nomes[i] != null)
+                if(equipamentoNomes[i] != "" && equipamentoNomes[i] != null)
                 {
                     return true;
                 }
@@ -555,11 +727,8 @@ namespace GestaoEquipamentosConsoleApp
         {
             for (int i = 0; i < equipamentoPosicaoReferencias.Length; i++)
             {
-                if (equipamentoPosicaoReferencias[i] == idEquipamento)
-                {
+                if (equipamentoPosicaoReferencias[i] == idEquipamento && titulos[i] == "")
                     return true;
-                }
-                    
             }
             
             return false;
@@ -582,7 +751,7 @@ namespace GestaoEquipamentosConsoleApp
                     DateTime dataAtual = DateTime.Now;
                     TimeSpan periodoTempo = dataAtual - dataCriacaoChamado;
                     int diferencaData = periodoTempo.Days;
-                    Console.Write("ID: {0} | Título: {1} | Equipamento: {2} | Data de abertura: {3} | Dias em aberto: {4}\n", (i+1).ToString(), titulos[i], nomes[equipamentoPosicaoReferencias[i]], dataAberturas[i], diferencaData);
+                    Console.Write("ID: {0} | Título: {1} | Equipamento: {2} | Data de abertura: {3} | Dias em aberto: {4}\n", (i+1).ToString(), titulos[i], equipamentoNomes[equipamentoPosicaoReferencias[i]], dataAberturas[i], diferencaData);
                 }
             }
             Console.WriteLine();
@@ -613,6 +782,48 @@ namespace GestaoEquipamentosConsoleApp
                 }
             }
             return false;
+        }
+        #endregion
+        #region Solicitante
+        private static bool ExistePosicaoPreenchidaArraySolicitantes()
+        {
+            bool ExisteSolicitanteCadastrado = false;
+
+            for (int i = 0; i < solicitanteNomes.Length; i++)
+            {
+                if (solicitanteNomes[i] != "" && solicitanteNomes[i] != null) { 
+                    ExisteSolicitanteCadastrado = true;
+                    break;
+                }
+                else
+                    ExisteSolicitanteCadastrado = false;
+            }
+
+            return ExisteSolicitanteCadastrado;
+        }
+        private static void ImprimirSolicitantes()
+        {
+            for (int i = 0; i < solicitanteNomes.Length; i++)
+            {
+                if (solicitanteNomes[i] != "" && solicitanteNomes[i] != null)
+                    Console.Write("ID: {0} | Nome: {1} | Email: {2} | Telefone: {3}\n", (i+1).ToString(), solicitanteNomes[i], solicitanteEmails[i], solicitanteTelefones[i]);
+            }
+            Console.WriteLine();
+        }
+        private static int posicaoParaInsercaoSolicitante()
+        {
+            int id = -1;
+
+            for (int i = 0; i < solicitanteNomes.Length; i++)
+            {
+                if (solicitanteNomes[i] == "" || solicitanteNomes[i] == null)
+                {
+                    id = i;
+                    break;
+                }
+            }
+            
+            return id;
         }
         #endregion
 
@@ -661,7 +872,7 @@ namespace GestaoEquipamentosConsoleApp
         {
             if (limparConsole == true)
                 Console.Clear();
-            Console.BackgroundColor = ConsoleColor.Green;
+            Console.BackgroundColor = ConsoleColor.DarkGreen;
             if (pularLinha == true) { 
                 Console.WriteLine(mensagem);
                 Console.WriteLine("");
@@ -674,7 +885,7 @@ namespace GestaoEquipamentosConsoleApp
         {
             if (limparConsole == true)
                 Console.Clear();
-            Console.BackgroundColor = ConsoleColor.Red;
+            Console.ForegroundColor = ConsoleColor.Red;
             if (pularLinha == true) { 
                 Console.WriteLine(mensagem);
                 Console.WriteLine("");
@@ -687,7 +898,7 @@ namespace GestaoEquipamentosConsoleApp
         {
             if (limparConsole == true)
                 Console.Clear();
-            Console.BackgroundColor = ConsoleColor.DarkYellow;
+            Console.ForegroundColor = ConsoleColor.DarkYellow;
             if (pularLinha == true)
             {
                 Console.WriteLine(mensagem);
@@ -698,14 +909,15 @@ namespace GestaoEquipamentosConsoleApp
             Console.ResetColor();
             
         }
-        private static void MensagemTitulo(string mensagem, bool limparConsole, bool pularLinha)
+        private static void TituloTelas(string mensagem, bool limparConsole, bool pularLinha)
         {
         if (limparConsole == true)
             Console.Clear();
-        Console.BackgroundColor = ConsoleColor.DarkBlue;
+        Console.BackgroundColor = ConsoleColor.Gray;
+        Console.ForegroundColor = ConsoleColor.Black;
         if (pularLinha == true)
         {
-            Console.WriteLine(mensagem);
+            Console.WriteLine("---------------------------------- "+mensagem+" ----------------------------------");
             Console.WriteLine("");
         }
         else
