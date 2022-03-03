@@ -342,7 +342,12 @@ namespace GestaoEquipamentosConsoleApp
             }
 
             ImprimeListaChamados();
+
+            Mensagem("Lista de equipamento mais problemáticos", false, true);
+            EquipamentoMaisProblematicos();
+
             Mensagem("Pressione enter para voltar ao menu principal", false, true);
+
             Console.ReadKey();
             LimparConsole();
         }
@@ -707,6 +712,60 @@ namespace GestaoEquipamentosConsoleApp
                 }
             }
             Console.WriteLine();
+        }
+        private static void EquipamentoMaisProblematicos()
+        {
+            int[] arrayOrdenaPosicoes = chamadoEquipamentoChamados;
+            int contadorNumerosDiferentes = 1, quantidadeNumeroDiferente = 1, contadorPosicoes = 0, contadorRepeticoes = 1;
+
+            for (int i = 0; i < arrayOrdenaPosicoes.Length; i++)
+            {
+                for (int z = 0; z < arrayOrdenaPosicoes.Length - 1; z++)
+                {
+                    if(arrayOrdenaPosicoes[z] > arrayOrdenaPosicoes[z + 1])
+                    {
+                        int troca = arrayOrdenaPosicoes[z];
+                        arrayOrdenaPosicoes[z] = arrayOrdenaPosicoes[z + 1];
+                        arrayOrdenaPosicoes[z + 1] = troca;
+                    }
+                }
+            }
+
+            for (int i = 0; i < arrayOrdenaPosicoes.Length; i++)
+            {
+                if(i != arrayOrdenaPosicoes.Length -1)
+                {
+                    if (arrayOrdenaPosicoes[i] != arrayOrdenaPosicoes[i + 1])
+                        contadorNumerosDiferentes++;
+                }
+            }
+            int[] numeros = new int[contadorNumerosDiferentes], numeroQuantidadeRepeticoes = new int[contadorNumerosDiferentes];
+            contadorPosicoes = 0;
+            for (int i = 0; i < arrayOrdenaPosicoes.Length; i++)
+            {
+                if (equipamentoNomes[arrayOrdenaPosicoes[i]] != "")
+                {
+                    if (i != arrayOrdenaPosicoes.Length -1)
+                    {
+                    
+                        if (arrayOrdenaPosicoes[i] == arrayOrdenaPosicoes[i + 1])
+                        {
+                            contadorRepeticoes++;
+                        }
+                        else
+                        {
+                            numeros[contadorPosicoes] = arrayOrdenaPosicoes[i];
+                            numeroQuantidadeRepeticoes[contadorPosicoes] = contadorRepeticoes;
+                            contadorPosicoes++;
+                            contadorRepeticoes = 1;
+                        }
+                    }
+                }
+            }
+            for (int i = 0; i < numeros.Length; i++)
+            {
+                Console.WriteLine("Equipamento {0} teve {1} ocorrência(s) de chamado(s)", equipamentoNomes[numeros[i]], numeroQuantidadeRepeticoes[i].ToString());
+            }
         }
         #endregion
 
