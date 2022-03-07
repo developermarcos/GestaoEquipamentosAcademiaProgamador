@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Text.RegularExpressions;
-// Validar nome com pelo menos 6 caracteres
-// Validar se existe chamado em aberto com o equipamento a ser excluído
-//
+
 namespace GestaoEquipamentosConsoleApp
 {
     internal class Program
@@ -20,7 +18,7 @@ namespace GestaoEquipamentosConsoleApp
         static DateTime[] chamadoDataAberturaChamados = new DateTime[100];
         
         // base cadastro Solicitantes
-        static string[] solicitanteNomes = new string[100], solicitanteEmails = new string[100], solicitanteTelefones= new string[100];
+        static string[] solicitanteNomes = new string[100], solicitanteEmails = new string[100], solicitanteTelefones = new string[100];
         
         static void Main(string[] args)
         {
@@ -56,64 +54,96 @@ namespace GestaoEquipamentosConsoleApp
         }
         public static void CadastrarEquipamentos()
         {
-            string nome, serie, dataFabricacao, fabricante;
-            decimal precoAquisicao;
+            string nome, serie, dataFabricacao, fabricante, nomeValidacao, padraoApenasNumeros = @"^\d+$";
+            decimal precoAquisicao = default;
+             bool apenasNumeros = false;
 
             TituloTelas("Cadastrar Equipamentos", true, true);
-            Mensagem("Informe o nome com no mínimo 6 caracteres ou enter para sair: ", false, false);
-            nome = Console.ReadLine();
-            if(nome.Length > 0 && nome.Length < 6)
+           
+            do
             {
-                string nomeValidacao;
-                do
+                Mensagem("-Informe o nome com no mínimo 6 caracteres ou enter para sair: ", false, false);
+                nome = Console.ReadLine();
+                if (nome == "")
                 {
-                    MensagemAviso("", false, true);
-                    MensagemAviso("Caracter deve conter pelo menos 6 caracteres: ", false, true);
-                    Mensagem("Informe o nome com no mínimo 6 caracteres ou enter para sair: ", false, true);
-                    nome = Console.ReadLine();
-                    if (nome == "")
-                    {
-                        LimparConsole();
-                        return;
-                    }
-                    nomeValidacao = nome;
-                } while (nomeValidacao.Trim().Length <= 5);
-            }
+                    LimparConsole();
+                    return;
+                }
+                nomeValidacao = nome;
+                
+                if (nomeValidacao.Trim().Length > 0 && nomeValidacao.Trim().Length < 6)
+                    MensagemAviso("\nCaracter deve conter pelo menos 6 caracteres: \n", false, false);
+                
+            } while (nomeValidacao.Trim().Length <= 5);
             if (nome == "")
             {
                 LimparConsole();
                 return;
             }
-            Console.Write("Informe o numero de serie ou enter para sair: ");
-            serie = Console.ReadLine();
+            
+            do
+            {
+                Mensagem("-Informe o numero de serie (deve ser único) ou enter para sair: ", false, false);
+                serie = Console.ReadLine();
+                if (serie == "")
+                {
+                    LimparConsole();
+                    return;
+                }
+                nomeValidacao = serie;
+                if (ExisteNumeroSerieRegistrado(nomeValidacao) == true)
+                    MensagemAviso("Número de série ja registrado\n", false, false);
+                else
+                    break;
+
+            } while (serie != "");
             if (serie == "")
             {
                 LimparConsole();
                 return;
             }
-            Console.Write("Informe o fabricante ou enter para sair: ");
+
+            Console.Write("-Informe o fabricante ou enter para sair: ");
             fabricante = Console.ReadLine();
             if (fabricante == "")
             {
                 LimparConsole();
                 return;
             }
-            Console.Write("Informe o ano de fabricação ou enter para sair: ");
-            dataFabricacao = Console.ReadLine();
+
+            while (true) 
+            {
+                bool valida = false;
+                Mensagem("-Informe a data de fabricação EX:(00/00/0000) ou enter para sair: ", false, false);
+                dataFabricacao = Console.ReadLine();
+                if(dataFabricacao != "")
+                    valida = ValidaData(dataFabricacao);
+                if (dataFabricacao == "" || valida == true)
+                    break;
+            }
             if (dataFabricacao == "")
             {
                 LimparConsole();
                 return;
             }
-            Console.Write("Informe o preço de aquisição ou enter para sair: ");
-            string lerTela = Console.ReadLine();
-            if (fabricante == "")
+
+            string lerTela;
+            do
+            {
+                MensagemAviso("O preço não poderá ser negativo ou zero", false, false);
+                Mensagem("\n-Informe o preço de aquisição ou enter para sair: ", false, false);
+                lerTela = Console.ReadLine();
+                if (lerTela == "")
+                    break;
+                
+                precoAquisicao = Convert.ToDecimal(lerTela);
+            } while (precoAquisicao <= 0 && lerTela != "");
+            if (lerTela == "")
             {
                 LimparConsole();
                 return;
             }
-            precoAquisicao = Convert.ToDecimal(lerTela);
-            
+
             int posicaoInsert = PosicaoParaInsercaoquipamentos();
             if (posicaoInsert != -1)
             {
@@ -121,7 +151,7 @@ namespace GestaoEquipamentosConsoleApp
                 equipamentoSeriais[posicaoInsert] = serie;
                 equipamentoFabricacaoDatas[posicaoInsert] = dataFabricacao;
                 equipamentoFabricantes[posicaoInsert] = fabricante;
-                equipamentoPrecoAquisicoes[posicaoInsert] = precoAquisicao;
+                equipamentoPrecoAquisicoes[posicaoInsert] = precoAquisicao == default ? default : precoAquisicao;
                 LimparConsole();
                 MensagemSucesso("Equipamento cadastrado com sucesso!", false, true);
             }
@@ -321,7 +351,23 @@ namespace GestaoEquipamentosConsoleApp
                     existe = true;
                     break;
                 }
-                        }
+            }
+
+            return existe;
+        }
+        private static bool ExisteNumeroSerieRegistrado(string numero)
+        {
+            string numeroSerie = numero;
+            bool existe = false;
+
+            for (int i = 0; i < equipamentoSeriais.Length; i++)
+            {
+                if (equipamentoSeriais[i] == numeroSerie)
+                {
+                    existe = true;
+                    break;
+                }
+            }
 
             return existe;
         }
@@ -404,9 +450,14 @@ namespace GestaoEquipamentosConsoleApp
                 return;
             }
 
-            Console.Write("Informe a data de abertura do chamado (EX: 00/00/0000) ou enter para sair: ");
-            dataAbertura = Console.ReadLine();
-            if (equipamentoReferenciaLerTela == "")
+            while (true)
+            {
+                Console.Write("Informe a data de abertura do chamado (EX: 00/00/0000) ou enter para sair: ");
+                dataAbertura = Console.ReadLine();
+                if (ValidaData(dataAbertura) || dataAbertura == "")
+                    break;
+            }
+            if (dataAbertura == "")
             {
                 LimparConsole();
                 return;
@@ -667,7 +718,7 @@ namespace GestaoEquipamentosConsoleApp
                         int dia = Convert.ToInt32(dataSeparada[0]);
                         int mes = Convert.ToInt32(dataSeparada[1]);
                         int ano = Convert.ToInt32(dataSeparada[2]);
-                        string nomeSolicitante;
+                        string nomeSolicitante, status;
 
                         DateTime dataCriacaoChamado = new DateTime(ano, mes, dia);
                         DateTime dataAtual = DateTime.Now;
@@ -678,7 +729,8 @@ namespace GestaoEquipamentosConsoleApp
                         else
                             nomeSolicitante = "Não informado";
 
-                        Console.Write("ID: {0} | Título: {1} | Solicitante: {2} | Equipamento: {3} | Data de abertura: {4} | Dias em aberto: {5} | Status: {6}\n", (i+1).ToString(), chamadoTitulos[i], nomeSolicitante, equipamentoNomes[chamadoEquipamentoChamados[i]], chamadoDataAberturas[i], diferencaData, chamadoStatus[i]);
+                        status = chamadoStatus[i] == 1 ? "Aberto" : "Fechado";
+                        Console.Write("ID: {0} | Título: {1} | Solicitante: {2} | Equipamento: {3} | Data de abertura: {4} | Dias em aberto: {5} | Status: {6}\n", (i+1).ToString(), chamadoTitulos[i], nomeSolicitante, equipamentoNomes[chamadoEquipamentoChamados[i]], chamadoDataAberturas[i], diferencaData, status);
                     }
                 }
             }
@@ -1113,6 +1165,29 @@ namespace GestaoEquipamentosConsoleApp
         #endregion
 
         #region Metodos auxiliares
+        private static bool ValidaData(string data)
+        {
+            string padraoApenasNumeros = @"^\d+$", dataValidacao = data;
+            string[] dataSeparada = data.Split("/");
+            bool valida = false;
+
+            if (dataSeparada.Length != 3)
+                MensagemAviso("Formato de data está com erro.\n", false, false);
+            else if ((dataSeparada[0].Length != 2) && (dataSeparada[1].Length != 2) && dataSeparada[2].Length != 4)
+                MensagemAviso("Formato de data está com erro, deve seguir o padrão 00/00/0000.\n", false, false);
+            else if ((Regex.IsMatch(dataSeparada[0], padraoApenasNumeros) == false) || (Regex.IsMatch(dataSeparada[1], padraoApenasNumeros) == false) || (Regex.IsMatch(dataSeparada[2], padraoApenasNumeros) == false))
+                MensagemAviso("Somente numeros devem ser informados, apenas separados pos barra '/'.\n", false, false);
+            else if (Convert.ToInt32(dataSeparada[0]) < 1 || Convert.ToInt32(dataSeparada[0]) > 31)
+                MensagemAviso("Dia invalido '/'.\n", false, false);
+            else if (Convert.ToInt32(dataSeparada[1]) < 1 || Convert.ToInt32(dataSeparada[1]) > 12)
+                MensagemAviso("mês invalido '/'.\n", false, false);
+            else if (Convert.ToInt32(dataSeparada[2]) < 1900)
+                MensagemAviso("Ano menor que ano mínimo aceito. (Ano mínimo: 1900)'/'.\n", false, false);
+            else
+                valida = true;
+
+            return valida;
+        }
         public static void PularLinha()
         {
             Console.WriteLine("");
@@ -1218,5 +1293,6 @@ namespace GestaoEquipamentosConsoleApp
         Console.ResetColor();
         }
         #endregion
+    
     }
 }
